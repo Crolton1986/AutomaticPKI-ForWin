@@ -39,5 +39,20 @@ if ($result.FailedCount -gt 0 -or $result.FailedContainersCount -gt 0) {
         if ($t.ErrorRecord) { $msg = ($t.ErrorRecord | Select-Object -First 1).Exception.Message -replace '\s+', ' ' }
         Write-Output ('FAIL {0} :: {1}' -f $t.ExpandedPath, $msg)
     }
+    # Full stack for the first three distinct messages, to locate the throwing line.
+    $shown = @{}
+    foreach ($t in $result.Failed) {
+        if (-not $t.ErrorRecord) { continue }
+        $er = $t.ErrorRecord | Select-Object -First 1
+        $m = [string]$er.Exception.Message
+        if ($shown.ContainsKey($m) -or $shown.Count -ge 3) { continue }
+        $shown[$m] = $true
+        Write-Output "----- STACK for: $m"
+        Write-Output $er.ScriptStackTrace
+        $inner = $er.Exception
+        while ($inner.InnerException) { $inner = $inner.InnerException }
+        Write-Output ('Innermost: {0}: {1}' -f $inner.GetType().FullName, $inner.Message)
+        Write-Output $inner.StackTrace
+    }
     if ($CI) { exit 1 }
 }
