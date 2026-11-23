@@ -23,12 +23,12 @@ function New-FakeIisBindingCollection {
     param([string]$SiteName, [hashtable]$HttpSys)
 
     $list = New-Object System.Collections.Generic.List[object]
-    Add-Member -InputObject $list -MemberType NoteProperty -Name SiteName -Value $SiteName
-    Add-Member -InputObject $list -MemberType NoteProperty -Name HttpSys -Value $HttpSys
-    Add-Member -InputObject $list -MemberType NoteProperty -Name Items -Value $list
+    Add-Member -Force -InputObject $list -MemberType NoteProperty -Name SiteName -Value $SiteName
+    Add-Member -Force -InputObject $list -MemberType NoteProperty -Name HttpSys -Value $HttpSys
+    Add-Member -Force -InputObject $list -MemberType NoteProperty -Name Items -Value $list
 
     # http.sys key: SNI -> host:port, otherwise ip:port with * as 0.0.0.0.
-    Add-Member -InputObject $list -MemberType NoteProperty -Name KeyFn -Value {
+    Add-Member -Force -InputObject $list -MemberType NoteProperty -Name KeyFn -Value {
         param([string]$bindingInformation, [int]$sslFlags)
         $last = $bindingInformation.LastIndexOf(':')
         $hostName = $bindingInformation.Substring($last + 1)
@@ -43,7 +43,7 @@ function New-FakeIisBindingCollection {
         ('{0}:{1}' -f $ip, $port).ToLowerInvariant()
     }
 
-    Add-Member -InputObject $list -MemberType ScriptMethod -Name AddRaw -Value {
+    Add-Member -Force -InputObject $list -MemberType ScriptMethod -Name AddRaw -Value {
         param([string]$protocol, [string]$bindingInformation, [int]$sslFlags)
         for ($i = 0; $i -lt $this.Count; $i++) {
             $existing = $this[$i]
@@ -81,7 +81,7 @@ function New-FakeIisBindingCollection {
     }
 
     # BindingCollection.Add(info, byte[] hash, store, flags) and Add(info, protocol)
-    Add-Member -InputObject $list -MemberType ScriptMethod -Name Add -Value {
+    Add-Member -Force -InputObject $list -MemberType ScriptMethod -Name Add -Value {
         if ($args.Count -eq 4) {
             $info = [string]$args[0]
             $hash = $args[1]
@@ -101,7 +101,7 @@ function New-FakeIisBindingCollection {
     }
 
     # BindingCollection.Remove(Binding binding, bool removeConfigOnly)
-    Add-Member -InputObject $list -MemberType ScriptMethod -Name Remove -Value {
+    Add-Member -Force -InputObject $list -MemberType ScriptMethod -Name Remove -Value {
         param([object]$binding, [bool]$removeConfigOnly)
         $index = -1
         for ($i = 0; $i -lt $this.Count; $i++) {
