@@ -128,7 +128,7 @@ function Set-APKIIisCertificateBinding {
         $others = @(Get-APKIIisEndpointSite -ServerManager $ServerManager -IPAddress $p.IPAddress -Port $p.Port -ExcludeSite $p.SiteName |
                 Where-Object { $managedSites -notcontains $_ })
         if ($others.Count -gt 0) {
-            Write-APKILog -Message "Endpoint $($p.IPAddress):$($p.Port) is shared (non-SNI); sites $($others -join ', ') will also serve certificate $thumb." -Level Warning -OrderId $orderId
+            Write-APKILog -Message "Endpoint $($p.IPAddress):$($p.Port) is shared (non-SNI); sites $($others -join ', ') will also serve certificate $thumb." -Level Warning -EventId 2006 -OrderId $orderId
         }
     }
 

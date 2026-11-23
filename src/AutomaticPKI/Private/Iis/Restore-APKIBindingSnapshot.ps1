@@ -160,7 +160,7 @@ function Restore-APKIBindingSnapshot {
 
     if ($changed -gt 0) {
         $ServerManager.CommitChanges()
-        Write-APKILog -Message "Restored $changed binding(s) from snapshot $source." -Level Info -OrderId $logId
+        Write-APKILog -Message "Restored $changed binding(s) from snapshot $source." -Level Info -EventId 1006 -OrderId $logId
     }
 
     $results.ToArray()

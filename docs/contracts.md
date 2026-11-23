@@ -42,7 +42,7 @@ Housekeeping: each renewal run (event 1000) calls `Remove-APKIOldLog`.
 |---|---|---|
 | Id | string | required; slug of site name, unique |
 | Status | string | `Proposed`, `Approved`, `Pending`, `Active`, `Failed`, `Disabled` |
-| SiteName | string | IIS site |
+| SiteName | string | IIS site. Shared non-SNI candidates use the first site; each Binding carries its own SiteName |
 | Hostnames | string[] | required; SANs, first is subject CN. May be empty only when `Proposed` or `Disabled` |
 | Bindings | Binding[] | bindings this order manages |
 | Provider | string | `AdcsRpc` or `AdcsCep` |
@@ -56,6 +56,8 @@ Housekeeping: each renewal run (event 1000) calls `Remove-APKIOldLog`.
 | PendingRequestId | string | provider-specific while `Pending`: AdcsRpc = numeric CA request ID; AdcsCep = thumbprint of the request in `Cert:\LocalMachine\Request` (retrieval must run on the same host) |
 | LastRenewal | string | ISO 8601 |
 | LastError | string | |
+| NameStatus | string | `Usable` / `NeedsName` (set by discovery; Proposed orders only) |
+| HostnameOverride | string[] | admin-supplied names, used after host header and bound-cert SANs |
 
 Required: Id, Status, SiteName, Hostnames, Provider. Enum values are case-sensitive. `LastRenewal` stays an ISO 8601 string (pwsh 7 `ConvertFrom-Json` would turn it into DateTime).
 
@@ -67,11 +69,12 @@ Required: Id, Status, SiteName, Hostnames, Provider. Enum values are case-sensit
 | IPAddress | string | `*` or literal IP |
 | Port | int | |
 | HostHeader | string | empty for non-SNI |
-| SslFlags | int | 0 none, 1 SNI |
+| SslFlags | int | bit 1 = SNI, bit 2 = Central Certificate Store (skipped by discovery, refused by Set); other bits preserved |
 | Thumbprint | string | empty for http |
 | StoreName | string | `My` / `WebHosting` |
 | NameStatus | string | `Usable`, `NeedsName` |
 | SharedWith | string[] | other sites on the same non-SNI IP:port |
+| BindingInformation | string | raw IIS `ip:port:host` |
 
 ## Provider functions
 Each provider `<P>` (`AdcsRpc`, `AdcsCep`) implements:
@@ -108,8 +111,8 @@ Binding.IPAddress for IPv6 is stored without brackets.
 
 ## IIS layer functions (called by Health)
 - `Get-APKIServerManager` (no params)
-- `Save-APKIBindingSnapshot -Order` → snapshot object
-- `Restore-APKIBindingSnapshot -Order -Snapshot`
+- `Save-APKIBindingSnapshot -Order` → `{ OrderId; CreatedUtc; Bindings[]; Path }`, also written to `snapshots\<Id>\<yyyyMMddTHHmmssfffZ>.json`
+- `Restore-APKIBindingSnapshot -Order [-Snapshot | -Path]` (no snapshot → newest file; throws on order mismatch)
 - `Set-APKIIisCertificateBinding -Order -Thumbprint` (SupportsShouldProcess)
 
 ## Notification
@@ -132,6 +135,8 @@ Binding.IPAddress for IPv6 is stored without brackets.
 | 2003 | Warning | Multiple CAs match, admin must choose |
 | 2004 | Warning | No CA found (not domain-joined or none publishes template) |
 | 2005 | Warning | Notification failed or secret unreadable |
+| 2006 | Warning | Shared non-SNI endpoint: sites outside the order also receive the new cert |
+| 1006 | Info | Bindings restored from snapshot |
 | 3000 | Error | Certificate request failed |
 | 3001 | Error | Certificate request denied |
 | 3002 | Error | Health check failed, rolled back |
