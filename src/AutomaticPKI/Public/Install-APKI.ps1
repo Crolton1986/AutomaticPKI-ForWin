@@ -8,6 +8,8 @@ function Install-APKI {
            no stale files survive an upgrade).
         2. Writes config.json with Set-APKIConfig: -Config values are merged over the existing
            configuration (nested objects such as Smtp key by key); nothing else is changed.
+           When no CA (CAConfig / CepUrl) is configured, Find-APKICA runs with the configured
+           Template and its candidates are reported (CACandidates); nothing is saved.
         3. Registers the daily renewal task for the installed copy (skipped with -NoTask).
         4. Adopts existing IIS certificates: Find-APKISite -Save records a Proposed order for
            every site, with the currently bound certificate as CurrentThumbprint. Nothing is
@@ -29,7 +31,8 @@ function Install-APKI {
         Shows what would be installed.
     .OUTPUTS
         PSCustomObject: ModulePath, TaskRegistered, ProposedOrders (Ids saved by this run),
-        CAConfigured.
+        CAConfigured, CACandidates (Find-APKICA results when no CA is configured; nothing is
+        saved, accept with Find-APKICA -Accept).
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     [OutputType([pscustomobject])]
@@ -79,13 +82,32 @@ function Install-APKI {
     }
 
     # --- T11 HOOK: CA discovery ------------------------------------------------------------
-    # When no CA is configured, T11 calls Find-APKICertificationAuthority here and proposes the
-    # result (discovery never writes config on its own; docs/contracts.md "CA candidate").
+    # No CA configured: discover candidates and report them. Discovery never writes config;
+    # the admin confirms with Find-APKICA -Accept or Set-APKIConfig (docs/contracts.md "CA candidate").
     $providerSettings = $merged.DefaultProviderSettings
     $caConfigured = [bool]([string](Get-APKIOptionalProperty -InputObject $providerSettings -Name 'CAConfig' -Default '')) -or
     [bool]([string](Get-APKIOptionalProperty -InputObject $providerSettings -Name 'CepUrl' -Default ''))
+    $caCandidates = @()
     if (-not $caConfigured) {
         Write-APKILog -Message 'No certification authority is configured (DefaultProviderSettings.CAConfig is empty). Set it with Install-APKI -Config or Set-APKIConfig before approving orders.' -Level Warning
+        $defaultTemplate = [string](Get-APKIOptionalProperty -InputObject $providerSettings -Name 'Template' -Default '')
+        try {
+            $caCandidates = @(Find-APKICA -Template $defaultTemplate -WhatIf:$false)
+        }
+        catch {
+            Write-APKILog -Message ('CA discovery failed: {0}' -f $_.Exception.Message) -Level Warning
+            $caCandidates = @()
+        }
+        $reachableCandidates = @($caCandidates | Where-Object { $_.Reachable })
+        if ($reachableCandidates.Count -eq 1) {
+            $only = $reachableCandidates[0]
+            $name = $only.CAConfig
+            if (-not $name) { $name = $only.CepUrl }
+            Write-APKILog -Message ("Proposed certification authority: '{0}' ({1}, from {2}). Accept it with Find-APKICA -Accept." -f $name, $only.Provider, $only.Source) -Level Warning
+        }
+        elseif ($reachableCandidates.Count -gt 1) {
+            Write-APKILog -Message ('{0} certification authorities are reachable; list them with Find-APKICA and choose one with Set-APKIConfig (Install-APKI -Config).' -f $reachableCandidates.Count) -Level Warning
+        }
     }
     # --- end T11 HOOK -----------------------------------------------------------------------
 
@@ -116,5 +138,6 @@ function Install-APKI {
         TaskRegistered = $taskRegistered
         ProposedOrders = [string[]]$proposed.ToArray()
         CAConfigured   = $caConfigured
+        CACandidates   = [object[]]$caCandidates
     }
 }
