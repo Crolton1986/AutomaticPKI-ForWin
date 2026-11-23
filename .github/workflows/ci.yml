@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
+          $r = Invoke-ScriptAnalyzer -Path src, tests, lab -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r | Format-Table -AutoSize
+          if ($r) { exit 1 }
+
+  unit:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [powershell, pwsh]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests (${{ matrix.shell }})
+        shell: ${{ matrix.shell }}
+        run: ./tests/Invoke-Tests.ps1 -Suite Unit -CI
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-results-${{ matrix.shell }}
+          path: testResults-*.xml
+
+  integration:
+    runs-on: windows-2022
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install IIS and standalone CA
+        shell: powershell
+        run: |
+          Install-WindowsFeature Web-Server, Web-Scripting-Tools, ADCS-Cert-Authority -IncludeManagementTools | Out-Null
+          Install-AdcsCertificationAuthority -CAType StandaloneRootCA -CACommonName 'APKI-CI-CA' -Force | Out-Null
+      - name: Integration tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./tests/Invoke-Tests.ps1 -Suite Integration -CI
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-results
+          path: testResults-*.xml
