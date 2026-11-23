@@ -31,7 +31,7 @@ function Send-APKINotification {
         $config = Get-APKIConfig
     }
     catch {
-        Write-APKILog -Level Warning -OrderId $OrderId -Message ("Notification '{0}' not sent: configuration unavailable: {1}" -f $Subject, $_.Exception.Message)
+        Write-APKILog -Level Warning -EventId 2005 -OrderId $OrderId -Message ("Notification '{0}' not sent: configuration unavailable: {1}" -f $Subject, $_.Exception.Message)
         return
     }
 
@@ -53,7 +53,7 @@ function Send-APKINotification {
         $missing.Add('Smtp.To')
     }
     if ($missing.Count -gt 0) {
-        Write-APKILog -Level Warning -OrderId $OrderId -Message ("Notification '{0}' not sent: SMTP is enabled but {1} is not set." -f $Subject, ($missing -join ', '))
+        Write-APKILog -Level Warning -EventId 2005 -OrderId $OrderId -Message ("Notification '{0}' not sent: SMTP is enabled but {1} is not set." -f $Subject, ($missing -join ', '))
         return
     }
 
@@ -63,7 +63,7 @@ function Send-APKINotification {
             $credential = Get-APKISecret -Name ([string]$smtp.CredentialRef)
         }
         catch {
-            Write-APKILog -Level Warning -OrderId $OrderId -Message ("Notification '{0}' not sent: {1}" -f $Subject, $_.Exception.Message)
+            Write-APKILog -Level Warning -EventId 2005 -OrderId $OrderId -Message ("Notification '{0}' not sent: {1}" -f $Subject, $_.Exception.Message)
             return
         }
     }
@@ -98,6 +98,6 @@ function Send-APKINotification {
         Write-APKILog -OrderId $OrderId -Message ("Notification '{0}' sent to {1}." -f $Subject, ($recipients -join ', '))
     }
     catch {
-        Write-APKILog -Level Warning -OrderId $OrderId -Message ("Notification '{0}' could not be sent via {1}:{2}: {3}" -f $Subject, $smtp.Server, $smtp.Port, $_.Exception.Message)
+        Write-APKILog -Level Warning -EventId 2005 -OrderId $OrderId -Message ("Notification '{0}' could not be sent via {1}:{2}: {3}" -f $Subject, $smtp.Server, $smtp.Port, $_.Exception.Message)
     }
 }

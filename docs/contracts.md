@@ -21,7 +21,7 @@ Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertu
   "RenewalDaysBefore": 30,
   "OldCertRetentionDays": 14,
   "DefaultProvider": "AdcsRpc",
-  "DefaultProviderSettings": { "CAConfig": "ca01.corp.local\\Corp Issuing CA", "Template": "WebServer" },
+  "DefaultProviderSettings": { "CAConfig": "", "Template": "WebServer" },
   "Smtp": { "Enabled": false, "Server": "", "Port": 25, "UseSsl": true, "From": "", "To": [], "CredentialRef": null },
   "LogRetentionDays": 30,
   "RevocationPolicy": "Strict"
@@ -29,15 +29,21 @@ Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertu
 ```
 `RevocationPolicy`: `Strict` (unknown/offline revocation fails precheck), `Lenient` (warn), `Skip`. Revoked always fails.
 
-`CredentialRef` names a DPAPI-protected secret stored by T2 (`secrets\<name>.xml`), never plain text.
+The JSON above is the default (`Get-APKIDefaultConfig`); missing keys are filled from it. Empty `CAConfig` means "not configured" (triggers CA discovery, T11).
+
+`CredentialRef` names a secret in `secrets\<Name>.xml`: Export-Clixml with user name plus password as DPAPI LocalMachine ciphertext. The folder ACL (SYSTEM + Administrators only, no inheritance) is the real protection. `Get-APKISecret -Name` → `[pscredential]`.
+
+Names (order Id, secret name, CredentialRef): 1–128 chars of `A-Z a-z 0-9 . _ -`, no `..`, no leading/trailing dot, no Windows device names (`Assert-APKISafeName`). Order Id from a site name: one shared slug function (T7 owns `ConvertTo-APKIOrderId`).
+
+Housekeeping: each renewal run (event 1000) calls `Remove-APKIOldLog`.
 
 ## Order (`orders\<Id>.json`, PSCustomObject in memory)
 | Field | Type | Notes |
 |---|---|---|
-| Id | string | slug of site name, unique |
+| Id | string | required; slug of site name, unique |
 | Status | string | `Proposed`, `Approved`, `Pending`, `Active`, `Failed`, `Disabled` |
 | SiteName | string | IIS site |
-| Hostnames | string[] | SANs; first is subject CN |
+| Hostnames | string[] | required; SANs, first is subject CN. May be empty only when `Proposed` or `Disabled` |
 | Bindings | Binding[] | bindings this order manages |
 | Provider | string | `AdcsRpc` or `AdcsCep` |
 | ProviderSettings | object | AdcsRpc: `CAConfig`, `Template`. AdcsCep: `CepUrl`, `Template`, `CredentialRef` (null = Kerberos) |
@@ -50,6 +56,8 @@ Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertu
 | PendingRequestId | string | provider-specific while `Pending`: AdcsRpc = numeric CA request ID; AdcsCep = thumbprint of the request in `Cert:\LocalMachine\Request` (retrieval must run on the same host) |
 | LastRenewal | string | ISO 8601 |
 | LastError | string | |
+
+Required: Id, Status, SiteName, Hostnames, Provider. Enum values are case-sensitive. `LastRenewal` stays an ISO 8601 string (pwsh 7 `ConvertFrom-Json` would turn it into DateTime).
 
 ## Binding (IIS layer output)
 | Field | Type | Notes |
@@ -123,6 +131,7 @@ Binding.IPAddress for IPv6 is stored without brackets.
 | 2002 | Warning | Hostname does not resolve to this host |
 | 2003 | Warning | Multiple CAs match, admin must choose |
 | 2004 | Warning | No CA found (not domain-joined or none publishes template) |
+| 2005 | Warning | Notification failed or secret unreadable |
 | 3000 | Error | Certificate request failed |
 | 3001 | Error | Certificate request denied |
 | 3002 | Error | Health check failed, rolled back |
