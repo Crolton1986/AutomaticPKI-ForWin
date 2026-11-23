@@ -3,7 +3,7 @@
 
     ServerManager : PSCustomObject { Sites, HttpSys, CommitCount } + ScriptMethod CommitChanges()
     Site          : PSCustomObject { Name, Id, Bindings }
-    Bindings      : FakeIisBindingCollection (enumerable; Add/Remove overloads used by the module)
+    Bindings      : List[object] with Add/Remove script methods (New-FakeIisBindingCollection)
     Binding       : PSCustomObject { Protocol, BindingInformation, SslFlags } + ScriptProperties
                     CertificateHash / CertificateStoreName read from the shared HttpSys table.
 
@@ -13,20 +13,23 @@
     Changes apply immediately; CommitCount records how often CommitChanges() was called.
 #>
 
-# Inherits List[object]: a PowerShell class implementing IEnumerable itself fails to enumerate
-# ("Argument types do not match"). Items points back at the collection for test readability.
-class FakeIisBindingCollection : System.Collections.Generic.List[object] {
-    [string]$SiteName
-    [hashtable]$HttpSys
-    [object]$Items
+function New-FakeIisBindingCollection {
+    <#
+        Plain List[object] with script methods that mimic BindingCollection.
+        (A PowerShell class here failed with "Argument types do not match" when module code used it.)
+        Methods: Add(info, hash, store, flags) / Add(info, protocol), Remove(binding, removeConfigOnly),
+        AddRaw(protocol, info, flags). Items points back at the list for test readability.
+    #>
+    param([string]$SiteName, [hashtable]$HttpSys)
 
-    FakeIisBindingCollection([string]$siteName, [hashtable]$httpSys) {
-        $this.SiteName = $siteName
-        $this.HttpSys = $httpSys
-        $this.Items = $this
-    }
+    $list = New-Object System.Collections.Generic.List[object]
+    Add-Member -InputObject $list -MemberType NoteProperty -Name SiteName -Value $SiteName
+    Add-Member -InputObject $list -MemberType NoteProperty -Name HttpSys -Value $HttpSys
+    Add-Member -InputObject $list -MemberType NoteProperty -Name Items -Value $list
 
-    static [string] GetHttpSysKey([string]$bindingInformation, [int]$sslFlags) {
+    # http.sys key: SNI -> host:port, otherwise ip:port with * as 0.0.0.0.
+    Add-Member -InputObject $list -MemberType NoteProperty -Name KeyFn -Value {
+        param([string]$bindingInformation, [int]$sslFlags)
         $last = $bindingInformation.LastIndexOf(':')
         $hostName = $bindingInformation.Substring($last + 1)
         $rest = $bindingInformation.Substring(0, $last)
@@ -36,21 +39,21 @@ class FakeIisBindingCollection : System.Collections.Generic.List[object] {
         if (($sslFlags -band 1) -ne 0) {
             return ('{0}:{1}' -f $hostName, $port).ToLowerInvariant()
         }
-        if ($ip -eq '*' -or $ip -eq '') {
-            $ip = '0.0.0.0'
-        }
-        return ('{0}:{1}' -f $ip, $port).ToLowerInvariant()
+        if ($ip -eq '*' -or $ip -eq '') { $ip = '0.0.0.0' }
+        ('{0}:{1}' -f $ip, $port).ToLowerInvariant()
     }
 
-    [object] AddRaw([string]$protocol, [string]$bindingInformation, [int]$sslFlags) {
-        foreach ($existing in $this.Items) {
+    Add-Member -InputObject $list -MemberType ScriptMethod -Name AddRaw -Value {
+        param([string]$protocol, [string]$bindingInformation, [int]$sslFlags)
+        for ($i = 0; $i -lt $this.Count; $i++) {
+            $existing = $this[$i]
             if ($existing.Protocol -eq $protocol -and $existing.BindingInformation -eq $bindingInformation) {
                 throw "Cannot add duplicate collection entry of type 'binding' with combined key attributes 'protocol, bindingInformation' respectively set to '$protocol, $bindingInformation'"
             }
         }
         $key = ''
         if ($protocol -eq 'https') {
-            $key = [FakeIisBindingCollection]::GetHttpSysKey($bindingInformation, $sslFlags)
+            $key = & $this.KeyFn $bindingInformation $sslFlags
         }
         $binding = [pscustomobject]@{
             Protocol           = $protocol
@@ -72,31 +75,37 @@ class FakeIisBindingCollection : System.Collections.Generic.List[object] {
             }
             return $null
         }
-        [System.Collections.Generic.List[object]].GetMethod('Add').Invoke($this, @(, $binding)) | Out-Null
+        # Insert, not Add: the Add script method below shadows List.Add.
+        $this.Insert($this.Count, $binding)
         return $binding
     }
 
-    # BindingCollection.Add(string bindingInformation, byte[] certificateHash, string certificateStoreName, SslFlags sslFlags)
-    [object] Add([string]$bindingInformation, [byte[]]$certificateHash, [string]$certificateStoreName, [int]$sslFlags) {
-        $binding = $this.AddRaw('https', $bindingInformation, $sslFlags)
-        if ($null -ne $certificateHash -and $certificateHash.Length -gt 0) {
-            $key = [FakeIisBindingCollection]::GetHttpSysKey($bindingInformation, $sslFlags)
-            $this.HttpSys[$key] = @{ Hash = $certificateHash; Store = $certificateStoreName }
+    # BindingCollection.Add(info, byte[] hash, store, flags) and Add(info, protocol)
+    Add-Member -InputObject $list -MemberType ScriptMethod -Name Add -Value {
+        if ($args.Count -eq 4) {
+            $info = [string]$args[0]
+            $hash = $args[1]
+            $store = [string]$args[2]
+            $flags = [int]$args[3]
+            $binding = $this.AddRaw('https', $info, $flags)
+            if ($null -ne $hash -and @($hash).Count -gt 0) {
+                $key = & $this.KeyFn $info $flags
+                $this.HttpSys[$key] = @{ Hash = [byte[]]$hash; Store = $store }
+            }
+            return $binding
         }
-        return $binding
-    }
-
-    # BindingCollection.Add(string bindingInformation, string protocol)
-    [object] Add([string]$bindingInformation, [string]$protocol) {
-        return $this.AddRaw($protocol, $bindingInformation, 0)
+        if ($args.Count -eq 2) {
+            return $this.AddRaw([string]$args[1], [string]$args[0], 0)
+        }
+        throw "Fake BindingCollection.Add: unsupported overload with $($args.Count) arguments."
     }
 
     # BindingCollection.Remove(Binding binding, bool removeConfigOnly)
-    [void] Remove([object]$binding, [bool]$removeConfigOnly) {
-        # Match on FakeId: PSCustomObject equality is not reliable across PowerShell versions.
+    Add-Member -InputObject $list -MemberType ScriptMethod -Name Remove -Value {
+        param([object]$binding, [bool]$removeConfigOnly)
         $index = -1
-        for ($i = 0; $i -lt $this.Items.Count; $i++) {
-            if ($this.Items[$i].FakeId -eq $binding.FakeId) {
+        for ($i = 0; $i -lt $this.Count; $i++) {
+            if ($this[$i].FakeId -eq $binding.FakeId) {
                 $index = $i
                 break
             }
@@ -104,12 +113,14 @@ class FakeIisBindingCollection : System.Collections.Generic.List[object] {
         if ($index -lt 0) {
             throw 'Binding is not in this collection.'
         }
-        $removed = $this.Items[$index]
-        $this.Items.RemoveAt($index)
+        $removed = $this[$index]
+        $this.RemoveAt($index)
         if (-not $removeConfigOnly -and $removed.HttpSysKey) {
             $this.HttpSys.Remove($removed.HttpSysKey)
         }
     }
+
+    , $list
 }
 
 function ConvertTo-FakeHashByte {
@@ -142,7 +153,7 @@ function Build-FakeIisServerManager {
 
     $id = 1
     foreach ($s in $Site) {
-        $coll = [FakeIisBindingCollection]::new([string]$s.Name, $httpSys)
+        $coll = New-FakeIisBindingCollection -SiteName ([string]$s.Name) -HttpSys $httpSys
         foreach ($b in @($s.Bindings)) {
             $flags = 0
             if ($b.ContainsKey('SslFlags')) {
@@ -150,7 +161,7 @@ function Build-FakeIisServerManager {
             }
             $null = $coll.AddRaw([string]$b.Protocol, [string]$b.BindingInformation, $flags)
             if ($b.ContainsKey('Thumbprint') -and $b.Thumbprint) {
-                $key = [FakeIisBindingCollection]::GetHttpSysKey([string]$b.BindingInformation, $flags)
+                $key = & $coll.KeyFn ([string]$b.BindingInformation) $flags
                 $store = 'My'
                 if ($b.ContainsKey('StoreName') -and $b.StoreName) {
                     $store = [string]$b.StoreName
