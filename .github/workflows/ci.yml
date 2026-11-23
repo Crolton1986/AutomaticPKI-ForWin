@@ -16,8 +16,11 @@ jobs:
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
-          $r = 'src', 'tests', 'lab' | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Recurse -Settings ./PSScriptAnalyzerSettings.psd1 }
-          $r | Format-Table -AutoSize
+          $r = @()
+          $r += Invoke-ScriptAnalyzer -Path src -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r += Invoke-ScriptAnalyzer -Path lab -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r += Invoke-ScriptAnalyzer -Path tests -Recurse -Settings ./tests/PSScriptAnalyzerSettings.psd1
+          $r | ForEach-Object { '{0}:{1} [{2}] {3}' -f $_.ScriptPath.Replace($PWD.Path, ''), $_.Line, $_.RuleName, $_.Message }
           if ($r) { exit 1 }
 
   unit:
