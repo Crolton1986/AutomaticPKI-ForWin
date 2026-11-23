@@ -11,12 +11,12 @@ jobs:
   lint:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: PSScriptAnalyzer
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
-          $r = Invoke-ScriptAnalyzer -Path src, tests, lab -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r = 'src', 'tests', 'lab' | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Recurse -Settings ./PSScriptAnalyzerSettings.psd1 }
           $r | Format-Table -AutoSize
           if ($r) { exit 1 }
 
@@ -27,7 +27,7 @@ jobs:
       matrix:
         shell: [powershell, pwsh]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Unit tests (Windows PowerShell 5.1)
         if: matrix.shell == 'powershell'
         shell: powershell
@@ -46,7 +46,7 @@ jobs:
     runs-on: windows-2022
     needs: unit
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install IIS and standalone CA
         shell: powershell
         run: |
