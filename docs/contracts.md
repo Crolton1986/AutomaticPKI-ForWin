@@ -9,7 +9,11 @@ config.json            global settings
 orders\<Id>.json       one order per file
 snapshots\<Id>\<ts>.json  binding snapshots before a swap
 logs\apki-<yyyyMMdd>.log
+tmp\<guid>\            per-operation scratch, always deleted in finally
 ```
+Functions that honor `-WhatIf` return nothing when the operation is skipped.
+
+Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertutil`, `Find-APKIMachineCertificate` (Private/Providers).
 
 ## Global config (`config.json`)
 ```json

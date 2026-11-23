@@ -52,6 +52,9 @@ jobs:
         run: |
           Install-WindowsFeature Web-Server, Web-Scripting-Tools, ADCS-Cert-Authority -IncludeManagementTools | Out-Null
           Install-AdcsCertificationAuthority -CAType StandaloneRootCA -CACommonName 'APKI-CI-CA' -Force | Out-Null
+          # Standalone CAs mark requests pending by default; auto-issue so integration runs complete.
+          certutil -setreg policy\RequestDisposition 1 | Out-Null
+          Restart-Service certsvc
       - name: Integration tests (Windows PowerShell 5.1)
         shell: powershell
         run: ./tests/Invoke-Tests.ps1 -Suite Integration -CI

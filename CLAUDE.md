@@ -3,7 +3,7 @@
 PowerShell module that issues web certs from ADCS (certreq RPC/DCOM, CES/CEP), binds them in IIS 10, health-checks, rolls back on failure, renews on a schedule. Plan of record: see `docs/contracts.md` for shared data shapes.
 
 ## Hard rules
-- Must run on **Windows PowerShell 5.1** (Server 2016+). Also load on pwsh 7 for tests. Forbidden: ternary `?:`, `??`, `?.`, `&&`/`||` pipeline chains, `ForEach-Object -Parallel`, `ConvertFrom-Json -AsHashtable`, `Get-Content -AsByteStream`, `using namespace` after code, `[ordered]` casts of PSCustomObject, `-SkipCertificateCheck`. Use `-Encoding UTF8` explicitly.
+- Must run on **Windows PowerShell 5.1** (Server 2016+). Also load on pwsh 7 for tests. Forbidden: ternary `?:`, `??`, `?.`, `&&`/`||` pipeline chains, `ForEach-Object -Parallel`, `ConvertFrom-Json -AsHashtable`, `Get-Content -AsByteStream`, `using namespace` after code, `[ordered]` casts of PSCustomObject, `-SkipCertificateCheck`. Use `-Encoding UTF8` explicitly (exception: certreq INF files are written `-Encoding Unicode`).
 - No external module dependencies at runtime. In-box only: PKI, IISAdministration/WebAdministration, ScheduledTasks, certreq/certutil, .NET Framework 4.x.
 - `Set-StrictMode -Version 3.0` is on. Initialize variables; check property existence on JSON objects.
 - One function per file. File name = function name. Public functions in `Public/`, everything else in `Private/<Area>/`. Prefix all functions with `APKI` noun (`Get-APKIOrder`).
