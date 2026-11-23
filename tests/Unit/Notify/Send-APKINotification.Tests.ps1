@@ -162,7 +162,7 @@ Describe 'Invoke-APKISmtpSend' {
         Mock Send-MailMessage -ModuleName AutomaticPKI { }
 
         InModuleScope AutomaticPKI {
-            Invoke-APKISmtpSend -SmtpServer 'smtp.corp.local' -UseSsl $false -From 'a@corp.local' -To 'b@corp.local' -Subject 's'
+            Invoke-APKISmtpSend -SmtpServer 'smtp.corp.local' -UseSsl $false -From 'a@corp.local' -To 'b@corp.local' -Subject 's' -Body 'b'
         }
 
         Should -Invoke Send-MailMessage -ModuleName AutomaticPKI -Times 1 -Exactly -ParameterFilter { -not $UseSsl }

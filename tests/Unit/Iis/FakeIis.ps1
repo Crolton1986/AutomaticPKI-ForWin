@@ -13,19 +13,17 @@
     Changes apply immediately; CommitCount records how often CommitChanges() was called.
 #>
 
-class FakeIisBindingCollection : System.Collections.IEnumerable {
+# Inherits List[object]: a PowerShell class implementing IEnumerable itself fails to enumerate
+# ("Argument types do not match"). Items points back at the collection for test readability.
+class FakeIisBindingCollection : System.Collections.Generic.List[object] {
     [string]$SiteName
     [hashtable]$HttpSys
-    [System.Collections.Generic.List[object]]$Items
+    [object]$Items
 
     FakeIisBindingCollection([string]$siteName, [hashtable]$httpSys) {
         $this.SiteName = $siteName
         $this.HttpSys = $httpSys
-        $this.Items = New-Object System.Collections.Generic.List[object]
-    }
-
-    [System.Collections.IEnumerator] GetEnumerator() {
-        return $this.Items.GetEnumerator()
+        $this.Items = $this
     }
 
     static [string] GetHttpSysKey([string]$bindingInformation, [int]$sslFlags) {
@@ -74,7 +72,7 @@ class FakeIisBindingCollection : System.Collections.IEnumerable {
             }
             return $null
         }
-        $this.Items.Add($binding)
+        [System.Collections.Generic.List[object]].GetMethod('Add').Invoke($this, @(, $binding)) | Out-Null
         return $binding
     }
 

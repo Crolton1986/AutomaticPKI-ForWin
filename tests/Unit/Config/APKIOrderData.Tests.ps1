@@ -113,7 +113,7 @@ Describe 'Order data store' {
                 param($Order)
                 Save-APKIOrderData -Order $Order
             }
-            Mock Move-Item -ModuleName AutomaticPKI { throw 'simulated crash during rename' }
+            Mock Move-APKIFileIntoPlace -ModuleName AutomaticPKI { throw 'simulated crash during rename' }
 
             {
                 InModuleScope AutomaticPKI -Parameters @{ Order = (Get-TestOrder -Status 'Failed') } {

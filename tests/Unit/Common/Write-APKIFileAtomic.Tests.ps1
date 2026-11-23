@@ -34,7 +34,7 @@ Describe 'Write-APKIFileAtomic' {
     It 'keeps the previous file intact and removes the temp file when the move fails' {
         New-Item -ItemType Directory -Path (Split-Path $script:Target -Parent) -Force | Out-Null
         Set-Content -LiteralPath $script:Target -Value 'original' -Encoding UTF8 -NoNewline
-        Mock Move-Item -ModuleName AutomaticPKI { throw 'simulated crash during rename' }
+        Mock Move-APKIFileIntoPlace -ModuleName AutomaticPKI { throw 'simulated crash during rename' }
 
         {
             InModuleScope AutomaticPKI -Parameters @{ Target = $script:Target } {
