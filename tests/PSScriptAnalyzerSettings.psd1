@@ -9,7 +9,8 @@
         'PSAvoidUsingPlainTextForPassword',
         'PSAvoidUsingConvertToSecureStringWithPlainText',
         'PSUseDeclaredVarsMoreThanAssignments',
-        'PSAvoidGlobalVars'
+        'PSAvoidGlobalVars',
+        'PSUsePSCredentialType'
     )
     Rules        = @{
         PSUseCompatibleSyntax = @{

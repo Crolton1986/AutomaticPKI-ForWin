@@ -6,7 +6,8 @@
     Description          = 'Automated certificate issuance, IIS binding and renewal for ADCS (RPC/DCOM and CES/CEP) on Windows Server.'
     PowerShellVersion    = '5.1'
     CompatiblePSEditions = @('Desktop', 'Core')
-    FunctionsToExport    = '*'
+    # Explicit list; add each Public/*.ps1 function here.
+    FunctionsToExport    = @()
     CmdletsToExport      = @()
     VariablesToExport    = @()
     AliasesToExport      = @()

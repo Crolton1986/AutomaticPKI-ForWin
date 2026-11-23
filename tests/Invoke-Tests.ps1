@@ -22,8 +22,22 @@ $paths = switch ($Suite) {
 
 $config = New-PesterConfiguration
 $config.Run.Path = $paths
-$config.Run.Exit = [bool]$CI
+$config.Run.PassThru = $true
 $config.Output.Verbosity = 'Detailed'
 $config.TestResult.Enabled = [bool]$CI
 $config.TestResult.OutputPath = Join-Path $root "testResults-$Suite-$($PSVersionTable.PSEdition).xml"
-Invoke-Pester -Configuration $config
+$result = Invoke-Pester -Configuration $config
+
+if ($result.FailedCount -gt 0 -or $result.FailedContainersCount -gt 0) {
+    Write-Output ''
+    Write-Output "===== FAILURE SUMMARY ($($PSVersionTable.PSEdition) $($PSVersionTable.PSVersion)) ====="
+    foreach ($c in $result.Containers | Where-Object { $_.Result -eq 'Failed' -and $_.ErrorRecord }) {
+        Write-Output ('CONTAINER {0}: {1}' -f $c.Item, ($c.ErrorRecord | Select-Object -First 1))
+    }
+    foreach ($t in $result.Failed) {
+        $msg = ''
+        if ($t.ErrorRecord) { $msg = ($t.ErrorRecord | Select-Object -First 1).Exception.Message -replace '\s+', ' ' }
+        Write-Output ('FAIL {0} :: {1}' -f $t.ExpandedPath, $msg)
+    }
+    if ($CI) { exit 1 }
+}

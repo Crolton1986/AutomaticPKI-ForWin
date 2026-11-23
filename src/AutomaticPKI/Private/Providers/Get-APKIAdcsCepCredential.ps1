@@ -9,6 +9,7 @@ function Get-APKIAdcsCepCredential {
         PSCredential (user name + password for a CEP/CES endpoint using UsernamePassword auth).
         Throws when the secret cannot be loaded or has the wrong type.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'CredentialRef', Justification = 'Name of a stored secret, not a password.')]
     [CmdletBinding()]
     [OutputType([pscredential])]
     param(
