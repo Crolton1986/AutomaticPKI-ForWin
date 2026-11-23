@@ -36,7 +36,7 @@ Describe 'Find-APKISiteCandidate' {
         }
 
         It 'proposes one order skeleton' {
-            $script:Result.Count | Should -Be 1
+            @($script:Result).Count | Should -Be 1
             $c = $script:Result[0]
             $c.Id | Should -Be 'contoso-web'
             $c.Status | Should -Be 'Proposed'

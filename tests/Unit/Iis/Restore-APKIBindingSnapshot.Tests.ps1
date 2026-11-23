@@ -80,7 +80,11 @@ Describe 'Save-APKIBindingSnapshot / Restore-APKIBindingSnapshot' {
         # the swap really happened
         ($result.Swap | Where-Object BindingInformation -EQ '*:443:new.contoso.com').Action | Should -Be 'Created'
         ($result.AfterSwap | Where-Object HostHeader -EQ 'new.contoso.com').Thumbprint | Should -Be $script:ThumbNew
-        ($result.AfterSwap | Where-Object SiteName -EQ 'Legacy2').Thumbprint | Should -Be $script:ThumbNew
+        $legacy2 = @($result.AfterSwap | Where-Object { $_.SiteName -eq 'Legacy2' -and $_.Protocol -eq 'https' })
+        if ($legacy2.Count -ne 1) {
+            Write-Host ('DIAG AfterSwap: ' + (@($result.AfterSwap) | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.SiteName, $_.Protocol, $_.BindingInformation, $_.Thumbprint }) -join ' ;; ')
+        }
+        $legacy2[0].Thumbprint | Should -Be $script:ThumbNew
 
         # and was undone
         ($result.Restore | Where-Object BindingInformation -EQ '*:443:new.contoso.com').Action | Should -Be 'Removed'
@@ -111,8 +115,8 @@ Describe 'Save-APKIBindingSnapshot / Restore-APKIBindingSnapshot' {
         InModuleScope AutomaticPKI -Parameters @{ SM = $script:Sm; O = $script:Order } {
             param($SM, $O)
             $null = Save-APKIBindingSnapshot -Order $O -ServerManager $SM -Confirm:$false
-            $site = @($SM.Sites)[0]
-            $www = @($site.Bindings) | Where-Object BindingInformation -EQ '*:443:www.contoso.com'
+            $site = $SM.Sites[0]
+            $www = $site.Bindings | Where-Object BindingInformation -EQ '*:443:www.contoso.com'
             $site.Bindings.Remove($www, $false)
             $r = @(Restore-APKIBindingSnapshot -Order $O -ServerManager $SM -Confirm:$false)
             ($r | Where-Object BindingInformation -EQ '*:443:www.contoso.com').Action | Should -Be 'Recreated'

@@ -48,5 +48,5 @@ function Get-APKIIisEndpointSite {
             }
         }
     }
-    , $names.ToArray()
+    $names.ToArray()
 }

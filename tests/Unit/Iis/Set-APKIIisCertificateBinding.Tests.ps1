@@ -53,7 +53,7 @@ Describe 'Set-APKIIisCertificateBinding' {
             $order = Get-TestOrder -Bindings @(Get-TestBinding -SiteName 'Contoso' -HostHeader 'www.contoso.com' -SslFlags 1)
             $r = Invoke-Swap -ServerManager $script:Sm -Order $order -Thumbprint $script:ThumbNew
 
-            $r.Count | Should -Be 1
+            @($r).Count | Should -Be 1
             $r[0].Action | Should -Be 'Updated'
             $r[0].PreviousThumbprint | Should -Be $script:ThumbA
             Get-FakeIisCertificate -ServerManager $script:Sm -SiteName 'Contoso' -BindingInformation '*:443:www.contoso.com' | Should -Be $script:ThumbNew
@@ -178,6 +178,6 @@ Describe 'Set-APKIIisCertificateBinding' {
         $http = [pscustomobject]@{ SiteName = 'Contoso'; Protocol = 'http'; IPAddress = '*'; Port = 80; HostHeader = 'www.contoso.com'; SslFlags = 0 }
         $order = Get-TestOrder -Bindings @($http, (Get-TestBinding -SiteName 'Contoso' -HostHeader 'www.contoso.com' -SslFlags 1))
         $r = Invoke-Swap -ServerManager $script:Sm -Order $order -Thumbprint $script:ThumbNew
-        $r.Count | Should -Be 1
+        @($r).Count | Should -Be 1
     }
 }
