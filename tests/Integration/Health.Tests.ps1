@@ -18,7 +18,8 @@ Describe 'Health checks against IIS' -Tag 'Integration' -Skip:(-not $script:HasI
         $script:SiteName = 'APKI-HealthTest'
         $script:HostsMarker = '# APKI-HEALTH-INTEGRATION'
         $script:HostsPath = Join-Path $env:windir 'System32\drivers\etc\hosts'
-        $script:SitePath = Join-Path $TestDrive 'site'
+        # Under inetpub so the app pool identity can read it ($TestDrive is in the runner's profile).
+        $script:SitePath = Join-Path $env:SystemDrive 'inetpub\apki-health-test'
 
         New-Item -ItemType Directory -Path $script:SitePath -Force | Out-Null
         Set-Content -Path (Join-Path $script:SitePath 'index.htm') -Value '<html><body>APKI health test</body></html>' -Encoding UTF8
@@ -86,6 +87,9 @@ Describe 'Health checks against IIS' -Tag 'Integration' -Skip:(-not $script:HasI
 
         if ($script:Thumbprint) {
             Remove-Item -Path ("Cert:\LocalMachine\My\{0}" -f $script:Thumbprint) -Force -ErrorAction SilentlyContinue
+        }
+        if ($script:SitePath -and (Test-Path -LiteralPath $script:SitePath)) {
+            Remove-Item -LiteralPath $script:SitePath -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         $lines = [System.IO.File]::ReadAllLines($script:HostsPath)

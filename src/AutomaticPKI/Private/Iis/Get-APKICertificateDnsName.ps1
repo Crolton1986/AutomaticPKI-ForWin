@@ -26,7 +26,7 @@ function Get-APKICertificateDnsName {
         Write-APKILog -Message "Certificate $Thumbprint not found in LocalMachine\$StoreName." -Level Info
     }
     if (-not $cert) {
-        return , $names.ToArray()
+        return $names.ToArray()
     }
 
     if ($cert.PSObject.Properties['DnsNameList'] -and $cert.DnsNameList) {
@@ -49,5 +49,5 @@ function Get-APKICertificateDnsName {
             $names.Add($cn)
         }
     }
-    , $names.ToArray()
+    $names.ToArray()
 }

@@ -31,5 +31,5 @@ function Resolve-APKIDnsName {
     catch {
         Write-APKILog -Message "DNS lookup for $Name failed: $($_.Exception.Message)" -Level Info
     }
-    , $result.ToArray()
+    $result.ToArray()
 }

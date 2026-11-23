@@ -16,5 +16,5 @@ function Get-APKILocalIPAddress {
             }
         }
     }
-    , $result.ToArray()
+    $result.ToArray()
 }
