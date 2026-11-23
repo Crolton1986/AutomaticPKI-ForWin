@@ -79,12 +79,8 @@ Describe 'Save-APKIBindingSnapshot / Restore-APKIBindingSnapshot' {
 
         # the swap really happened
         ($result.Swap | Where-Object BindingInformation -EQ '*:443:new.contoso.com').Action | Should -Be 'Created'
-        ($result.AfterSwap | Where-Object HostHeader -EQ 'new.contoso.com').Thumbprint | Should -Be $script:ThumbNew
-        $legacy2 = @($result.AfterSwap | Where-Object { $_.SiteName -eq 'Legacy2' -and $_.Protocol -eq 'https' })
-        if ($legacy2.Count -ne 1) {
-            Write-Host ('DIAG AfterSwap: ' + (@($result.AfterSwap) | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.SiteName, $_.Protocol, $_.BindingInformation, $_.Thumbprint }) -join ' ;; ')
-        }
-        $legacy2[0].Thumbprint | Should -Be $script:ThumbNew
+        ($result.AfterSwap | Where-Object { $_.HostHeader -eq 'new.contoso.com' -and $_.Protocol -eq 'https' }).Thumbprint | Should -Be $script:ThumbNew
+        ($result.AfterSwap | Where-Object { $_.SiteName -eq 'Legacy2' -and $_.Protocol -eq 'https' }).Thumbprint | Should -Be $script:ThumbNew
 
         # and was undone
         ($result.Restore | Where-Object BindingInformation -EQ '*:443:new.contoso.com').Action | Should -Be 'Removed'
