@@ -28,8 +28,13 @@ jobs:
         shell: [powershell, pwsh]
     steps:
       - uses: actions/checkout@v4
-      - name: Unit tests (${{ matrix.shell }})
-        shell: ${{ matrix.shell }}
+      - name: Unit tests (Windows PowerShell 5.1)
+        if: matrix.shell == 'powershell'
+        shell: powershell
+        run: ./tests/Invoke-Tests.ps1 -Suite Unit -CI
+      - name: Unit tests (PowerShell 7)
+        if: matrix.shell == 'pwsh'
+        shell: pwsh
         run: ./tests/Invoke-Tests.ps1 -Suite Unit -CI
       - uses: actions/upload-artifact@v4
         if: always()
