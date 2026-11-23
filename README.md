@@ -11,4 +11,4 @@ Status: early development. Not ready for production.
 - Event Log and SMTP alerting
 - Runs as a local scheduled task or pushed to a fleet from a management host over WinRM
 
-Contributor rules are in [CLAUDE.md](CLAUDE.md); shared data shapes in [docs/contracts.md](docs/contracts.md).
+Contributor rules are in [CLAUDE.md](CLAUDE.md); shared data shapes in [docs/contracts.md](docs/contracts.md). A Hyper-V test lab (domain, two CAs, CEP/CES, workgroup host) is in [lab/](lab/README.md).
