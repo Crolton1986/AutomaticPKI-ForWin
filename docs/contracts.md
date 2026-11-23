@@ -67,6 +67,20 @@ Each provider `<P>` (`AdcsRpc`, `AdcsCep`) implements:
 ProviderResult: `Status` (`Issued`/`Pending`/`Denied`/`Failed`), `Thumbprint`, `RequestId`, `Message`.
 Issued certs land in `Cert:\LocalMachine\My` with private key.
 
+## CA candidate (`Find-APKICertificationAuthority`)
+| Field | Type | Notes |
+|---|---|---|
+| Provider | string | `AdcsRpc` or `AdcsCep` |
+| CAConfig | string | `host\CA Name` (AdcsRpc), else null |
+| CepUrl | string | AdcsCep only, else null |
+| CAHost | string | CA DNS host name (`dNSHostName`) |
+| CAName | string | CA name (`cn`) |
+| PublishedTemplates | string[] | from `certificateTemplates`; empty for CEP |
+| Source | string | `AD`, `GPO`, `Manual` |
+| Reachable | bool | result of `Test-APKI<Provider>Provider` |
+
+Discovery never writes config on its own. One reachable match with empty `DefaultProviderSettings` is proposed; the admin confirms via `Set-APKIConfig` or `Find-APKICA -Accept`. More than one match is never auto-selected.
+
 ## Health check result
 Each check returns `[pscustomobject]@{ Check = 'TlsHandshake'; Target = 'www.contoso.com:443'; Passed = $true; Detail = '...' }`.
 
@@ -80,9 +94,12 @@ Each check returns `[pscustomobject]@{ Check = 'TlsHandshake'; Target = 'www.con
 | 1002 | Info | Request pending CA approval |
 | 1003 | Info | HTTPS binding created |
 | 1004 | Info | Old certificate removed |
+| 1005 | Info | Certification authority discovered |
 | 2000 | Warning | Certificate expiring, renewal not succeeding |
 | 2001 | Warning | Binding needs a hostname (discovery) |
 | 2002 | Warning | Hostname does not resolve to this host |
+| 2003 | Warning | Multiple CAs match, admin must choose |
+| 2004 | Warning | No CA found (not domain-joined or none publishes template) |
 | 3000 | Error | Certificate request failed |
 | 3001 | Error | Certificate request denied |
 | 3002 | Error | Health check failed, rolled back |
