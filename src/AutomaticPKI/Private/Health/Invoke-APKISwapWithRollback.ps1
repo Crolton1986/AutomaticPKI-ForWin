@@ -107,7 +107,7 @@ function Invoke-APKISwapWithRollback {
     # 3. Bind and verify
     $failure = ''
     try {
-        Set-APKIIisCertificateBinding -Order $Order -Thumbprint $newThumb -Confirm:$false
+        $null = Set-APKIIisCertificateBinding -Order $Order -Thumbprint $newThumb -Confirm:$false
         $result.HealthCheck = Invoke-APKIHealthCheck -Order $Order -Thumbprint $newThumb -TimeoutSec $TimeoutSec
         if (-not $result.HealthCheck.Passed) {
             $failure = 'Health check failed: {0}' -f (& $formatFailures $result.HealthCheck.Results)
@@ -129,7 +129,7 @@ function Invoke-APKISwapWithRollback {
     $result.ActiveThumbprint = $oldThumbprint
     $rollbackError = ''
     try {
-        Restore-APKIBindingSnapshot -Order $Order -Snapshot $snapshot
+        $null = Restore-APKIBindingSnapshot -Order $Order -Snapshot $snapshot
     }
     catch {
         $rollbackError = 'Restore of binding snapshot failed: {0}' -f $_.Exception.Message

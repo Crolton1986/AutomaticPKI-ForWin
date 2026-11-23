@@ -83,7 +83,7 @@ foreach ($current in $run) {
         }
         'CA' {
             foreach ($ca in $lab.CertificationAuthorities) {
-                Install-LabCertificationAuthority -Lab $lab -AdminCredential $admin -CA $ca
+                Install-LabCertificationAuthority -AdminCredential $admin -CA $ca
             }
             # The template container exists once the first enterprise CA is installed.
             Install-LabCertificateTemplate -Lab $lab -AdminCredential $admin -Name $lab.Templates.Standard

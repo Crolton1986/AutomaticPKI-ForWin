@@ -5,9 +5,6 @@ function Install-LabCertificationAuthority {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [hashtable]$Lab,
-
-        [Parameter(Mandatory)]
         [hashtable]$AdminCredential,
 
         [Parameter(Mandatory)]
