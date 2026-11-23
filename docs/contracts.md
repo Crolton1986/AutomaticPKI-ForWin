@@ -38,13 +38,13 @@ Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertu
 | Bindings | Binding[] | bindings this order manages |
 | Provider | string | `AdcsRpc` or `AdcsCep` |
 | ProviderSettings | object | AdcsRpc: `CAConfig`, `Template`. AdcsCep: `CepUrl`, `Template`, `CredentialRef` (null = Kerberos) |
-| Key | object | `Algorithm` (`RSA`/`ECDSA_P256`), `Length` (2048), `Exportable` (bool) |
+| Key | object | `Algorithm` (`RSA`/`ECDSA_P256`), `Length` (2048), `Exportable` (bool). Honored by AdcsRpc only; AdcsCep uses the template's key settings and logs a warning on mismatch |
 | KeyMode | string | `OnHost` (default) or `Central` |
 | CreateBinding | bool | create https binding if missing |
 | HttpProbe | object | `Enabled`, `Path` (`/`), `ExpectStatusBelow` (500) |
 | RenewalDaysBefore | int/null | overrides global |
 | CurrentThumbprint, PreviousThumbprint | string | |
-| PendingRequestId | string | CA request ID while `Pending` |
+| PendingRequestId | string | provider-specific while `Pending`: AdcsRpc = numeric CA request ID; AdcsCep = thumbprint of the request in `Cert:\LocalMachine\Request` (retrieval must run on the same host) |
 | LastRenewal | string | ISO 8601 |
 | LastError | string | |
 
@@ -69,7 +69,9 @@ Each provider `<P>` (`AdcsRpc`, `AdcsCep`) implements:
 - `Test-APKI<P>Provider -Order <Order>` → `[bool]`, logs reason on false
 
 ProviderResult: `Status` (`Issued`/`Pending`/`Denied`/`Failed`), `Thumbprint`, `RequestId`, `Message`.
-Issued certs land in `Cert:\LocalMachine\My` with private key.
+Issued certs land in `Cert:\LocalMachine\My` with private key. Providers log issuance without an event ID; the renewal engine logs 1001 after binding succeeds.
+
+`Get-APKISecret -Name` returns a `[pscredential]`.
 
 ## CA candidate (`Find-APKICertificationAuthority`)
 | Field | Type | Notes |
