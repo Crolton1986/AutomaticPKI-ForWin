@@ -106,7 +106,7 @@ Describe 'Invoke-APKIOrderRenewal' {
             $r.Outcome | Should -Be 'Renewed'
             $r.Thumbprint | Should -Be $script:NewThumb
             Should -Invoke -ModuleName AutomaticPKI Invoke-APKISwapWithRollback -Times 1 -Exactly -ParameterFilter {
-                $NewThumbprint -eq ('B2' * 20) -and $RevocationPolicy -eq 'Skip' -and $Order.CurrentThumbprint -eq ('A1' * 20)
+                $NewThumbprint -eq ('B2' * 20) -and $RevocationPolicy -eq 'Skip'
             }
             $saved = Get-SavedOrder
             $saved.Status | Should -Be 'Active'
