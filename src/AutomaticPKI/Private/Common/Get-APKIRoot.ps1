@@ -14,7 +14,7 @@ function Get-APKIRoot {
         $root = Join-Path $env:ProgramData 'AutomaticPKI'
     }
     if (-not (Test-Path -LiteralPath $root)) {
-        New-Item -ItemType Directory -Path $root -Force | Out-Null
+        New-Item -ItemType Directory -Path $root -Force -WhatIf:$false | Out-Null
     }
     $root
 }
