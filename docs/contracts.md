@@ -99,6 +99,9 @@ Issued certs land in `Cert:\LocalMachine\My` with private key. Providers log iss
 | Source | string | `AD`, `GPO`, `Manual` |
 | Reachable | bool | result of `Test-APKI<Provider>Provider` |
 
+`Find-APKICertificationAuthority [-Template]` → candidates (AD first, then GPO); unreachable ones kept with `Reachable` $false. Logs 1005 per reachable, 2003 if >1 reachable, 2004 if none. Public: `Find-APKICA [-Template] [-Accept]`; `Install-APKI` calls it (no `-Accept`) when no CAConfig/CepUrl is set and returns `CACandidates`.
+Mock targets (one external call each): `Test-APKIDomainJoined` (CIM `Win32_ComputerSystem.PartOfDomain`), `Get-APKIAdEnrollmentService` (LDAP, `pKIEnrollmentService` under `CN=Enrollment Services,CN=Public Key Services,CN=Services,<configurationNamingContext>`) and `Get-APKICertutilAdca` (`certutil -ADCA` via `Invoke-APKICertutil`, only when LDAP throws) → `{ DnsHostName; Name; Templates[] }`; `Get-APKIGpoEnrollmentPolicyServer` (`Get-CertificateEnrollmentPolicyServer -Scope All -Context Machine`; only https `Url`s become AdcsCep candidates). Not domain-joined → no LDAP.
+
 Discovery never writes config on its own. One reachable match with empty `DefaultProviderSettings` is proposed; the admin confirms via `Set-APKIConfig` or `Find-APKICA -Accept`. More than one match is never auto-selected.
 
 ## Health check result

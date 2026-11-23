@@ -46,6 +46,8 @@ Describe 'Install-APKI' {
         Mock -ModuleName AutomaticPKI Request-APKIAdcsCepCertificate { throw 'must not request' }
         Mock -ModuleName AutomaticPKI Invoke-APKISwapWithRollback { throw 'must not swap' }
         Mock -ModuleName AutomaticPKI Set-APKIIisCertificateBinding { throw 'must not bind' }
+        # CA discovery (T11): no real AD/CEP lookups in unit tests.
+        Mock -ModuleName AutomaticPKI Find-APKICA { }
     }
 
     It 'copies the module, registers the task for the installed copy and adopts IIS sites without issuing' {
@@ -112,10 +114,40 @@ Describe 'Install-APKI' {
         $existing.Status | Should -Be 'Proposed'
     }
 
-    It 'marks the T11 hook: warns when no CA is configured' {
+    It 'warns when no CA is configured and reports discovered candidates without saving them' {
+        Mock -ModuleName AutomaticPKI Find-APKICA {
+            [pscustomobject]@{
+                Provider = 'AdcsRpc'; CAConfig = 'ca01.contoso.com\Contoso Issuing CA'; CepUrl = $null; CAHost = 'ca01.contoso.com'
+                CAName = 'Contoso Issuing CA'; PublishedTemplates = [string[]]@('WebServer'); Source = 'AD'; Reachable = $true
+            }
+        }
+
         $r = Install-APKI -Destination $script:Destination -NoTask
+
         $r.CAConfigured | Should -BeFalse
+        @($r.CACandidates).Count | Should -Be 1
+        $r.CACandidates[0].CAConfig | Should -Be 'ca01.contoso.com\Contoso Issuing CA'
         Should -Invoke -ModuleName AutomaticPKI Write-APKILog -ParameterFilter { $Level -eq 'Warning' -and $Message -match 'No certification authority is configured' }
+        Should -Invoke -ModuleName AutomaticPKI Find-APKICA -Times 1 -Exactly -ParameterFilter { $Template -eq 'WebServer' -and -not $Accept }
+        Should -Invoke -ModuleName AutomaticPKI Write-APKILog -ParameterFilter { $Message -match 'Find-APKICA -Accept' }
+        (InModuleScope AutomaticPKI { Get-APKIConfig }).DefaultProviderSettings.CAConfig | Should -Be ''
+    }
+
+    It 'does not run CA discovery when a CA is configured' {
+        $r = Install-APKI -Destination $script:Destination -NoTask -Config @{ DefaultProviderSettings = @{ CAConfig = 'ca01\Contoso CA' } }
+
+        $r.CAConfigured | Should -BeTrue
+        @($r.CACandidates).Count | Should -Be 0
+        Should -Invoke -ModuleName AutomaticPKI Find-APKICA -Times 0 -Exactly
+    }
+
+    It 'keeps installing when CA discovery throws' {
+        Mock -ModuleName AutomaticPKI Find-APKICA { throw 'discovery broke' }
+
+        $r = Install-APKI -Destination $script:Destination -NoTask
+
+        @($r.ProposedOrders).Count | Should -Be 2
+        Should -Invoke -ModuleName AutomaticPKI Write-APKILog -ParameterFilter { $Message -match 'CA discovery failed' }
     }
 
     It 'refuses a destination that is not an AutomaticPKI folder' {

@@ -9,6 +9,7 @@
     # Explicit list; add each Public/*.ps1 function here.
     FunctionsToExport    = @(
         'Approve-APKIOrder'
+        'Find-APKICA'
         'Find-APKISite'
         'Get-APKIOrder'
         'Install-APKI'
