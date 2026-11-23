@@ -45,14 +45,14 @@ if ($result.FailedCount -gt 0 -or $result.FailedContainersCount -gt 0) {
         if (-not $t.ErrorRecord) { continue }
         $er = $t.ErrorRecord | Select-Object -First 1
         $m = [string]$er.Exception.Message
-        if ($shown.ContainsKey($m) -or $shown.Count -ge 3) { continue }
+        if ($shown.ContainsKey($m) -or $shown.Count -ge 6) { continue }
         $shown[$m] = $true
         Write-Output "----- STACK for: $m"
-        Write-Output $er.ScriptStackTrace
+        Write-Output (($er.ScriptStackTrace -split "`r?`n") | Where-Object { $_ -notmatch 'Pester\.ps' } | Select-Object -First 6)
         $inner = $er.Exception
         while ($inner.InnerException) { $inner = $inner.InnerException }
         Write-Output ('Innermost: {0}: {1}' -f $inner.GetType().FullName, $inner.Message)
-        Write-Output $inner.StackTrace
+        Write-Output (($inner.StackTrace -split "`r?`n") | Select-Object -First 3)
     }
     if ($CI) { exit 1 }
 }
