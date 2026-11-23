@@ -143,3 +143,12 @@ Binding.IPAddress for IPv6 is stored without brackets.
 | 3003 | Error | Rollback failed, site may be down |
 | 3004 | Error | Configuration invalid |
 | 3005 | Error | Pre-swap check failed (precheck or snapshot), no change made |
+
+## Engine (T7, Private/Engine)
+- `ConvertTo-APKIOrderId -SiteName` → slug (lower-case, non-alphanumeric runs → `-`, max 120, empty → `site`, device names get `-site`); passes `Assert-APKISafeName`. `Find-APKISiteCandidate` adds `-2`, `-3` for duplicates.
+- `Invoke-APKIProviderRequest -Order` / `Invoke-APKIProviderReceive -Order [-RequestId]` → ProviderResult from `Request-/Receive-APKI<Order.Provider>Certificate`; unknown provider → `Failed` + 3004.
+- `Test-APKIRenewalDue -Order [-Config] [-Now]` → `{ Due; Reason; NotAfter; RenewAfter }`. RenewAfter = earlier of NotAfter − RenewalDaysBefore and NotAfter − lifetime/3.
+- `Invoke-APKIOrderRenewal -Order [-Force] [-Config]` → `{ OrderId; Outcome (Renewed|Pending|Failed|NotDue|Skipped); Status; Thumbprint; Message; Order }`. Saves the order; never mutates the input. Providers log 1002/3000/3001; the engine only notifies for them.
+- `Remove-APKIOldCertificate [-Order] [-RetentionDays]`: deletes PreviousThumbprint when LastRenewal is older than OldCertRetentionDays, no IIS binding (`Get-APKIBoundThumbprint`) or order uses it; 1004. Unreadable IIS → deletes nothing.
+- Mock targets: `Get-APKIBoundThumbprint`, `Remove-APKIMachineCertificate -Thumbprint`, `Invoke-APKIScheduledTask -Operation Get|Register` (only caller of ScheduledTasks).
+- Scheduled task: `\AutomaticPKI\AutomaticPKI Renewal`.

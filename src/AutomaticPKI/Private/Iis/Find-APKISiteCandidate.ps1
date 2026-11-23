@@ -152,10 +152,7 @@ function Find-APKISiteCandidate {
             }
         }
 
-        $id = ($primary.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
-        if (-not $id) {
-            $id = 'site'
-        }
+        $id = ConvertTo-APKIOrderId -SiteName $primary
         $baseId = $id
         $i = 2
         while ($usedIds.Contains($id)) {

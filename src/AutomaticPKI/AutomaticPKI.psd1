@@ -7,7 +7,17 @@
     PowerShellVersion    = '5.1'
     CompatiblePSEditions = @('Desktop', 'Core')
     # Explicit list; add each Public/*.ps1 function here.
-    FunctionsToExport    = @()
+    FunctionsToExport    = @(
+        'Approve-APKIOrder'
+        'Find-APKISite'
+        'Get-APKIOrder'
+        'Install-APKI'
+        'Invoke-APKIRenewal'
+        'New-APKICertificate'
+        'Register-APKIRenewalTask'
+        'Remove-APKIOrder'
+        'Test-APKISite'
+    )
     CmdletsToExport      = @()
     VariablesToExport    = @()
     AliasesToExport      = @()
