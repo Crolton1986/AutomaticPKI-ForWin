@@ -29,12 +29,12 @@ function Find-APKIIisSiteBinding {
 
     $foundSite = $null
     $foundBinding = $null
-    foreach ($site in @($ServerManager.Sites)) {
+    foreach ($site in $ServerManager.Sites) {
         if ([string]$site.Name -ne $SiteName) {
             continue
         }
         $foundSite = $site
-        foreach ($b in @($site.Bindings)) {
+        foreach ($b in $site.Bindings) {
             if ([string]$b.Protocol -ne $Protocol) {
                 continue
             }

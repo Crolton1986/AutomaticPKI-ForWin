@@ -22,9 +22,9 @@ function Get-APKIIisBinding {
     }
 
     $all = New-Object System.Collections.Generic.List[object]
-    foreach ($site in @($ServerManager.Sites)) {
+    foreach ($site in $ServerManager.Sites) {
         $name = [string]$site.Name
-        foreach ($b in @($site.Bindings)) {
+        foreach ($b in $site.Bindings) {
             $protocol = ([string]$b.Protocol).ToLowerInvariant()
             if ($protocol -ne 'http' -and $protocol -ne 'https') {
                 continue

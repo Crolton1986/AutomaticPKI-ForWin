@@ -23,12 +23,12 @@ function Get-APKIIisEndpointSite {
     )
 
     $names = New-Object System.Collections.Generic.List[string]
-    foreach ($site in @($ServerManager.Sites)) {
+    foreach ($site in $ServerManager.Sites) {
         $name = [string]$site.Name
         if ($name -eq $ExcludeSite) {
             continue
         }
-        foreach ($b in @($site.Bindings)) {
+        foreach ($b in $site.Bindings) {
             if ([string]$b.Protocol -ne 'https') {
                 continue
             }
