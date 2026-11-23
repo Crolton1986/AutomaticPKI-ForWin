@@ -4,8 +4,8 @@ function Invoke-APKISwapWithRollback {
         Binds a new certificate to an order's IIS bindings, verifies it, and rolls back on failure.
     .DESCRIPTION
         1. Precheck the new certificate (Test-APKICertificatePrecheck). Failure: nothing is
-           changed, event 3000 logged, notification sent.
-        2. Save-APKIBindingSnapshot.  Failure: nothing is changed, event 3000, notification.
+           changed, event 3005 logged, notification sent.
+        2. Save-APKIBindingSnapshot.  Failure: nothing is changed, event 3005, notification.
         3. Set-APKIIisCertificateBinding, then Invoke-APKIHealthCheck against the new thumbprint.
            Success: event 1001.
         4. On any failure in 3: Restore-APKIBindingSnapshot and re-run the health check against
@@ -86,7 +86,7 @@ function Invoke-APKISwapWithRollback {
     if ($precheckFailures) {
         $result.Outcome = 'PrecheckFailed'
         $result.Error = "Precheck failed for $newThumb; bindings unchanged. $precheckFailures"
-        Write-APKILog -Message $result.Error -Level Error -EventId 3000 -OrderId $orderId
+        Write-APKILog -Message $result.Error -Level Error -EventId 3005 -OrderId $orderId
         & $notify "AutomaticPKI: certificate precheck failed for $orderId" $result.Error
         return $result
     }
@@ -99,7 +99,7 @@ function Invoke-APKISwapWithRollback {
     catch {
         $result.Outcome = 'SnapshotFailed'
         $result.Error = 'Could not snapshot bindings; swap not attempted: {0}' -f $_.Exception.Message
-        Write-APKILog -Message $result.Error -Level Error -EventId 3000 -OrderId $orderId
+        Write-APKILog -Message $result.Error -Level Error -EventId 3005 -OrderId $orderId
         & $notify "AutomaticPKI: binding snapshot failed for $orderId" $result.Error
         return $result
     }

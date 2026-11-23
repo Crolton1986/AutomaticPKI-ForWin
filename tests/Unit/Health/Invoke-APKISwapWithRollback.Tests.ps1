@@ -121,7 +121,7 @@ Describe 'Invoke-APKISwapWithRollback' {
         $r.ActiveThumbprint | Should -Be $script:OldThumb
         Should -Invoke -ModuleName AutomaticPKI Save-APKIBindingSnapshot -Times 0 -Exactly
         Should -Invoke -ModuleName AutomaticPKI Set-APKIIisCertificateBinding -Times 0 -Exactly
-        Should -Invoke -ModuleName AutomaticPKI Write-APKILog -Times 1 -Exactly -ParameterFilter { $EventId -eq 3000 }
+        Should -Invoke -ModuleName AutomaticPKI Write-APKILog -Times 1 -Exactly -ParameterFilter { $EventId -eq 3005 }
         Should -Invoke -ModuleName AutomaticPKI Send-APKINotification -Times 1 -Exactly
     }
 

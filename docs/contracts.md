@@ -23,9 +23,12 @@ Shared helpers (reuse, don't duplicate): `Invoke-APKICertreq`, `Invoke-APKICertu
   "DefaultProvider": "AdcsRpc",
   "DefaultProviderSettings": { "CAConfig": "ca01.corp.local\\Corp Issuing CA", "Template": "WebServer" },
   "Smtp": { "Enabled": false, "Server": "", "Port": 25, "UseSsl": true, "From": "", "To": [], "CredentialRef": null },
-  "LogRetentionDays": 30
+  "LogRetentionDays": 30,
+  "RevocationPolicy": "Strict"
 }
 ```
+`RevocationPolicy`: `Strict` (unknown/offline revocation fails precheck), `Lenient` (warn), `Skip`. Revoked always fails.
+
 `CredentialRef` names a DPAPI-protected secret stored by T2 (`secrets\<name>.xml`), never plain text.
 
 ## Order (`orders\<Id>.json`, PSCustomObject in memory)
@@ -69,7 +72,7 @@ Each provider `<P>` (`AdcsRpc`, `AdcsCep`) implements:
 - `Test-APKI<P>Provider -Order <Order>` → `[bool]`, logs reason on false
 
 ProviderResult: `Status` (`Issued`/`Pending`/`Denied`/`Failed`), `Thumbprint`, `RequestId`, `Message`.
-Issued certs land in `Cert:\LocalMachine\My` with private key. Providers log issuance without an event ID; the renewal engine logs 1001 after binding succeeds.
+Issued certs land in `Cert:\LocalMachine\My` with private key. Providers log issuance without an event ID; `Invoke-APKISwapWithRollback` logs 1001 after binding and health check succeed; nothing else logs 1001.
 
 `Get-APKISecret -Name` returns a `[pscredential]`.
 
@@ -89,6 +92,20 @@ Discovery never writes config on its own. One reachable match with empty `Defaul
 
 ## Health check result
 Each check returns `[pscustomobject]@{ Check = 'TlsHandshake'; Target = 'www.contoso.com:443'; Passed = $true; Detail = '...' }`.
+
+`Invoke-APKIHealthCheck` → `{ Passed; Thumbprint; Results[] }`.
+`Invoke-APKISwapWithRollback` → `{ Success; Outcome; ActiveThumbprint; Precheck; HealthCheck; RollbackHealthCheck; Error }`. It never mutates the order; the caller saves Current/PreviousThumbprint.
+
+Binding.IPAddress for IPv6 is stored without brackets.
+
+## IIS layer functions (called by Health)
+- `Get-APKIServerManager` (no params)
+- `Save-APKIBindingSnapshot -Order` → snapshot object
+- `Restore-APKIBindingSnapshot -Order -Snapshot`
+- `Set-APKIIisCertificateBinding -Order -Thumbprint` (SupportsShouldProcess)
+
+## Notification
+`Send-APKINotification -Subject -Body [-Level Info|Warning|Error] [-EventId] [-OrderId]`
 
 ## Logging
 `Write-APKILog -Message -Level Info|Warning|Error -EventId <int> -OrderId <string>`. Event Log source `AutomaticPKI`, log `Application`.
@@ -111,3 +128,4 @@ Each check returns `[pscustomobject]@{ Check = 'TlsHandshake'; Target = 'www.con
 | 3002 | Error | Health check failed, rolled back |
 | 3003 | Error | Rollback failed, site may be down |
 | 3004 | Error | Configuration invalid |
+| 3005 | Error | Pre-swap check failed (precheck or snapshot), no change made |
